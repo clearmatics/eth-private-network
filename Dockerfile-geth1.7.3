@@ -1,0 +1,50 @@
+# Copyright (c) 2016-2018 Clearmatics Technologies Ltd
+# SPDX-License-Identifier: LGPL-3.0+
+
+FROM ubuntu:17.10
+
+# Information about the docker image
+LABEL version="1.0"
+LABEL maintainer="opensource@clearmatics.com"
+
+# Skip apt's interactive post install configuration steps
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install useful packages
+RUN apt-get update && apt-get install --yes software-properties-common wget bash tmux vim
+
+# Create the "eth_user" user
+RUN adduser --disabled-login --gecos "" eth_user
+
+# Fetch the version 1.7.3 of Geth
+RUN wget https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.7.3-4bb3c89d.tar.gz -P /home/eth_user
+
+# Extract the geth archive
+RUN cd /home/eth_user/ && tar -xvf geth-linux-amd64-1.7.3-4bb3c89d.tar.gz
+
+# Move the geth binar into the PATH
+RUN mv /home/eth_user/geth-linux-amd64-1.7.3-4bb3c89d/geth /usr/local/bin
+
+# Remove the geth extracted archive
+RUN rm -r /home/eth_user/geth-linux-amd64-1.7.3-4bb3c89d
+
+# Change the ownership of the eth_user folder
+RUN chown -R eth_user:eth_user /home/eth_user
+COPY eth_common /home/eth_user/eth_common
+RUN chown -R eth_user:eth_user /home/eth_user/eth_common
+USER eth_user
+
+# Set up the working directory
+WORKDIR /home/eth_user
+
+# Build arguments whose values are given to env variables to configure the docker images from one node to another
+ARG identity_arg
+ARG rpcport_arg
+ENV identity_env $identity_arg
+ENV rpcport_env $rpcport_arg
+
+# Make the startNode script executable by the eth_user
+COPY startNode.sh /home/eth_user
+
+# Start a bash session (the user has to run ./startNode.sh from the WORKDIR when he wants to start the node)
+ENTRYPOINT /bin/bash

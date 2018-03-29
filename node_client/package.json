@@ -1,0 +1,9 @@
+{
+  "name": "node_client",
+  "version": "1.0.0",
+  "description": "NodeJS JSON-RPC client for Ethereum private network",
+  "main": "index.js",
+  "dependencies": {
+    "node-json-rpc": "0.0.1"
+  }
+}

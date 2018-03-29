@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+    node_one:
+        build:
+            context: .
+            dockerfile: Dockerfile-gethlatest
+            args:
+                identity_arg: "NODE_ONE"
+                rpcport_arg: 8548
+        tty: true
+        stdin_open: true
+        ports:
+            - "8548:8548"
+        networks:
+            - privtnet
+    node_two:
+        build:
+            context: .
+            dockerfile: Dockerfile-gethlatest
+            args:
+                identity_arg: "NODE_TWO"
+                rpcport_arg: 8549
+        networks:
+            - privtnet
+        tty: true
+        stdin_open: true
+        ports:
+            - "8549:8549"
+networks:
+    privtnet:
+        external:
+            name: privtnet

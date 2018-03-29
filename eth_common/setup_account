@@ -1,0 +1,4 @@
+#!/bin/bash
+
+geth --password eth_common/password account new
+
