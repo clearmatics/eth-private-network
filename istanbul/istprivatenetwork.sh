@@ -1,11 +1,13 @@
 #!/bin/bash
 
-# TODO: remember to add a function for the bootnode
 # TODO: instead of having 2 different scripts have multiple arguements which state what is to be done with the script
-# TODO: Need to initialise each of the node using the genesis
-# TODO: Need to start the nodes using genesis
-# TODO: change the way ports are passed to the geth when the program is created
-# TODO: Get the istanbulversion of Geth
+    # Think about the work for running the script
+    #
+# TODO: Change the way ports are passed to the geth when the program is created
+# TODO: Write Tmux scripts to bring up the network.
+# TODO: Get the istanbul version of Geth and decide which to use to build the latest version of geth or the autonity
+
+#DOING
 
 # DONE
 # TODO: in the createAccount() function create the account using  password and geth
@@ -19,6 +21,8 @@
     # Create a javascript file to update genesis files
     # Learn how to save the json into the file from script
 # TODO: Only install geth if not availabe
+# TODO: Need to initialise each of the node using the genesis
+# TODO: remember to add a function for the bootnode
 
 # Define variables
 GOPATH="/home/user98/go"
@@ -43,40 +47,50 @@ isRoot() {
 installGeth() {
     geth version > /dev/null 2>&1
     if [ "$?" -ne "0" ]; then
-        echo; echo "Installing latest Geth ..."
+    echo
+        "---------Installing latest Geth---------"
         apt-get install -y software-properties-common
         add-apt-repository -y ppa:ethereum/ethereum
         apt-get update
         apt-get install -y ethereum
-        echo "Finished installing Geth ..."; echo
+        "---------Finished installing Geth---------"
+    echo
     fi
 }
 
 # Create a common password file
 createPasswd() {
-    echo; echo "Creating ${PASSWORD_PATH} ..."
+    echo
+    echo "---------Creating ${PASSWORD_PATH}---------"
     touch "${PASSWORD_PATH}"
     echo "istanbulnetwork" > "${PASSWORD_PATH}"
-    echo "Finished creating ${PASSWORD_PATH} ..."; echo
+    echo "---------Finished creating ${PASSWORD_PATH}---------"
+    echo
 }
 
 # Create a directory for the given path
-createDIR() {
+createDir() {
     DIR="$1"
-    if [ ! -d  "${DIR}" ]; then
-        echo; echo "Creating ${DIR}"
+    if ! [ -d  "${DIR}" ]; then
+        echo "---------Creating ${DIR}---------"
         mkdir -p "${DIR}"
-        echo "Finished creating ${DIR}"; echo
+        echo "---------Finished creating ${DIR}---------"
     fi
 }
 
 # Bye using Geth create the account in the given dir location
-createAccount() {
-    NODE_DIR="$1"
-    PORT="$2"
-
-    createDIR ${NODE_DIR}
-    geth --datadir ${NODE_DIR} --password ${PASSWORD_PATH} account new
+createAccounts() {
+    echo "---------Creating Accounts---------"
+    for i in `seq 1 "${NUMBER_OF_NODES}"`
+    do
+    echo
+        if ! [ -d  ""${ISTANBUL_DIR}/node${i}"" ]; then
+            mkdir -p ""${ISTANBUL_DIR}/node${i}""
+        fi
+        geth --datadir "${ISTANBUL_DIR}/node${i}" --password ${PASSWORD_PATH} account new
+    echo
+    done
+    echo "---------Finished creating Accounts---------"
 }
 
 # Create toml file which has validator addresses in them
@@ -107,7 +121,7 @@ createToml() {
 # Create the genesis needed to initialise the nodes
 createGenesis() {
     echo
-
+    echo "---------Creating Genesis file---------"
     # Get the address from keystore and store them in an array
     ADDRESSES=()
     for i in `ls ${ISTANBUL_DIR} | grep node`
@@ -118,13 +132,14 @@ createGenesis() {
     # Clone istanbul-tools
     if ! [ -d "${ISTANBUL_TOOLS_PATH}" ]; then
         git clone "${ISTANBUL_TOOLS_GITHUB}" "${ISTANBUL_TOOLS_PATH}"
-        chown -R `logname`:`logname` "${GETAMIS_PATH}"
     fi
 
     # Make istanbul-tools
     if ! [ -f "${ISTANBUL_TOOLS_PATH}/build/bin/istanbul" ]; then
         make -C ${ISTANBUL_TOOLS_PATH}
     fi
+    
+    chown -R `logname`:`logname` "${GETAMIS_PATH}"
 
     # Run istanbul-tools
     ${ISTANBUL_TOOLS_PATH}/build/bin/istanbul setup --num ${NUMBER_OF_NODES} --verbose --save > /dev/null 2>&1
@@ -143,15 +158,27 @@ createGenesis() {
 
     # Update genesis file, the genesis.json and extra data's file location is passed in and the rest of the addresses are passed to assign some ether
     node "${THIS_FILE_PARENT_DIR}/updategenesis.js" "${ISTANBUL_DIR}/genesis.json" "${ISTANBUL_DIR}/newextradata.txt" ${ADDRESSES[@]}
+    echo "---------Finished creating Genesis file---------"
+    echo
 }
 
-initialiseNetwork() {
+initialiseNodes() {
+    echo
+    echo "---------Initialising nodes with Genesis file---------"
+    for i in `ls ${ISTANBUL_DIR} | grep node`
+    do
+    echo
+        geth --datadir "${ISTANBUL_DIR}/${i}" init "${ISTANBUL_DIR}/genesis.json"
+    echo
+    done
+    echo "---------Finished initialising nodes with Genesis file---------"
     echo
 }
 
 
-startBootNode() {
-    echo
+createBootNodeKey() {
+    bootnode -genkey "${ISTANBUL_DIR}/boot.key"
+    cat "${ISTANBUL_DIR}/boot.key"; echo
 }
 
 ### Start of the main script
@@ -167,17 +194,19 @@ if [ -d "${ISTANBUL_DIR}" ]; then
     rm -rf "${ISTANBUL_DIR}"
 fi
 
-installGeth
+installGeth;
 
-createDIR "${ISTANBUL_DIR}"
+createDir "${ISTANBUL_DIR}"
 cd "${ISTANBUL_DIR}"
+
 createPasswd
 
-for i in `seq 1 "${NUMBER_OF_NODES}"`
-do
-    createAccount "${ISTANBUL_DIR}/node${i}" 1000${i}
-done
+createAccounts
 
 createGenesis
+
+initialiseNodes
+
+createBootNodeKey
 
 chown -R `logname`:`logname` "${ISTANBUL_DIR}"
