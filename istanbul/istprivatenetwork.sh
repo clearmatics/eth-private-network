@@ -4,10 +4,12 @@
     # Think about the work for running the script
     #
 # TODO: Change the way ports are passed to the geth when the program is created
-# TODO: Write Tmux scripts to bring up the network.
 # TODO: Get the istanbul version of Geth and decide which to use to build the latest version of geth or the autonity
+# TODO: Assume geth is installed and ask for bin path
 
 #DOING
+# TODO: Write Tmux scripts to bring up the network.
+# TODO: get rid of the superuser/isRoot stuff.
 
 # DONE
 # TODO: in the createAccount() function create the account using  password and geth
@@ -34,6 +36,7 @@ NUMBER_OF_NODES=$1
 GETAMIS_PATH="${GOPATH}/src/github.com/getamis"
 ISTANBUL_TOOLS_PATH="${GOPATH}/src/github.com/getamis/istanbul-tools"
 ISTANBUL_TOOLS_GITHUB="https://github.com/getamis/istanbul-tools.git"
+TMUX_SESSION_NAME="istanbul_network"
 
 # Ensure script is run as root
 isRoot() {
@@ -178,7 +181,11 @@ initialiseNodes() {
 
 createBootNodeKey() {
     bootnode -genkey "${ISTANBUL_DIR}/boot.key"
-    cat "${ISTANBUL_DIR}/boot.key"; echo
+}
+
+launchBootNode() {
+    tmux new -s ${TMUX_SESSION_NAME} -n "bootnode" -d
+    tmux send-keys -t "${TMUX_SESSION_NAME}:bootnode" "bootnode -nodekey \"${ISTANBUL_DIR}/boot.key\" -verbosity 9 -addr 4520"
 }
 
 ### Start of the main script
@@ -210,3 +217,5 @@ initialiseNodes
 createBootNodeKey
 
 chown -R `logname`:`logname` "${ISTANBUL_DIR}"
+
+launchBootNode
