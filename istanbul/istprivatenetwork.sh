@@ -6,6 +6,8 @@
 # TODO: Change the way ports are passed to the geth when the program is created
 # TODO: Get the istanbul version of Geth and decide which to use to build the latest version of geth or the autonity
 # TODO: Assume geth is installed and ask for bin path
+# TODO: change the chainid and mixhash in javascript to ensure wvery on has the right chainid
+#
 
 #DOING
 # TODO: Write Tmux scripts to bring up the network.
@@ -37,6 +39,10 @@ GETAMIS_PATH="${GOPATH}/src/github.com/getamis"
 ISTANBUL_TOOLS_PATH="${GOPATH}/src/github.com/getamis/istanbul-tools"
 ISTANBUL_TOOLS_GITHUB="https://github.com/getamis/istanbul-tools.git"
 TMUX_SESSION_NAME="istanbul_network"
+BOOTNODE_PORT=48000
+PORT=48000
+RPC_PORT=95001
+NETWORKID=1530
 
 # Ensure script is run as root
 isRoot() {
@@ -185,7 +191,32 @@ createBootNodeKey() {
 
 launchBootNode() {
     tmux new -s ${TMUX_SESSION_NAME} -n "bootnode" -d
-    tmux send-keys -t "${TMUX_SESSION_NAME}:bootnode" "bootnode -nodekey \"${ISTANBUL_DIR}/boot.key\" -verbosity 9 -addr 4520"
+    tmux send-keys -t "${TMUX_SESSION_NAME}:bootnode" "bootnode -nodekey \"${ISTANBUL_DIR}/boot.key\" -verbosity 9 -addr :${BOOTNODE_PORT}" C-m
+    PORT=`expr ${PORT} + 1`
+}
+
+launchNodes() {
+    FULL_SYNCMODE="--syncmode 'full'"
+    RPC="--rpc --rpcaddr 'localhost' --rpcapi 'personal,db,eth,net,web3,txpool,miner'"
+    BOOTNODE="--bootnodes \"encode://`bootnode -nodekey ${ISTANBUL_DIR}/boot.key -writeaddress`@127.0.0.1:${BOOTNODE_PORT}\""
+    GASPRICE="--gasprice '1'"
+    MINE="--mine --minerthreads 1"
+
+    count=1
+    for i in `ls ${ISTANBUL_DIR} | grep node`
+    do
+        UNLOCKACCOUNT="-unlock \"0x`ls ${ISTANBUL_DIR}/${i}/keystore | cut -d'-' -f9`\" --password ${PASSWORD_PATH}"
+
+        tmux new-window -t ${TMUX_SESSION_NAME}:${count} -n ${i} 
+        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "geth --datadir "${ISTANBUL_DIR}/${i}" ${FULL_SYNCMODE} --port ${PORT} --rpcport ${RPC_PORT} ${RPC} ${BOOTNODECMD} --networkid ${NETWORKID} ${GASPRICE} ${UNLOCKACCOUNT} ${MINE}" C-m
+        tmux split-window -h -t ${TMUX_SESSION_NAME}:${count}
+        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "sleep 45s" C-m
+        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "geth attach ipc:${ISTANBUL_DIR}/${i}/geth.ipc"
+        
+        PORT=`expr ${PORT} + 1`
+        RPC_PORT=`expr ${RPC_PORT} + 1`
+        count=`expr ${count} + 1`
+    done
 }
 
 ### Start of the main script
@@ -218,4 +249,5 @@ createBootNodeKey
 
 chown -R `logname`:`logname` "${ISTANBUL_DIR}"
 
-launchBootNode
+# launchBootNode
+launchNodes
