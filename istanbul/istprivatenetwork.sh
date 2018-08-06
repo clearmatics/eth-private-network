@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# TODO: instead of having 2 different scripts have multiple arguements which state what is to be done with the script
+# TODO: instead of having 2 different scripts have multiple arguments which state what is to be done with the script
     # Think about the work for running the script
     #
 # TODO: Change the way ports are passed to the geth when the program is created
@@ -38,9 +38,9 @@ GETAMIS_PATH="${GOPATH}/src/github.com/getamis"
 ISTANBUL_TOOLS_PATH="${GOPATH}/src/github.com/getamis/istanbul-tools"
 ISTANBUL_TOOLS_GITHUB="https://github.com/getamis/istanbul-tools.git"
 TMUX_SESSION_NAME="istanbul_network"
-BOOTNODE_PORT=48000
-PORT=48000
-RPC_PORT=95001
+BOOTNODE_PORT=4800
+PORT=4800
+RPC_PORT=9501
 NETWORKID=1530
 
 # Create a common password file
@@ -172,7 +172,7 @@ launchBootNode() {
 launchNodes() {
     FULL_SYNCMODE="--syncmode 'full'"
     RPC="--rpc --rpcaddr 'localhost' --rpcapi 'personal,db,eth,net,web3,txpool,miner'"
-    BOOTNODE="--bootnodes \"encode://`bootnode -nodekey ${ISTANBUL_DIR}/boot.key -writeaddress`@127.0.0.1:${BOOTNODE_PORT}\""
+    BOOTNODE="--bootnodes \"enode://`bootnode -nodekey ${ISTANBUL_DIR}/boot.key -writeaddress`@127.0.0.1:${BOOTNODE_PORT}\""
     GASPRICE="--gasprice '1'"
     MINE="--mine --minerthreads 1"
 
@@ -182,7 +182,7 @@ launchNodes() {
         UNLOCKACCOUNT="-unlock \"0x`ls ${ISTANBUL_DIR}/${i}/keystore | cut -d'-' -f9`\" --password ${PASSWORD_PATH}"
 
         tmux new-window -t ${TMUX_SESSION_NAME}:${count} -n ${i} 
-        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} --datadir "${ISTANBUL_DIR}/${i}" ${FULL_SYNCMODE} --port ${PORT} --rpcport ${RPC_PORT} ${RPC} ${BOOTNODECMD} --networkid ${NETWORKID} ${GASPRICE} ${UNLOCKACCOUNT} ${MINE}" C-m
+        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} --datadir "${ISTANBUL_DIR}/${i}" ${FULL_SYNCMODE} --port ${PORT} --rpcport ${RPC_PORT} ${RPC} ${BOOTNODE} --networkid ${NETWORKID} ${GASPRICE} ${UNLOCKACCOUNT} ${MINE}" C-m
         tmux split-window -h -t ${TMUX_SESSION_NAME}:${count}
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "sleep 45s" C-m
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} attach ipc:${ISTANBUL_DIR}/${i}/geth.ipc" C-m
@@ -195,12 +195,12 @@ launchNodes() {
 
 ### Start of the main script
 if ! [ ${NUMBER_OF_NODES} -eq ${NUMBER_OF_NODES} ] || [ -z ${NUMBER_OF_NODES} ]; then
-    echo "Please enter geth binary path as first arguement and number of nodes as second"
+    echo "Please enter geth binary path as first argument and number of nodes as second"
     exit 1
 fi
 
 if [ -z ${GETH_BIN_PATH} ]; then
-    echo "Please enter geth binary path as first arguement and number of nodes as second"
+    echo "Please enter geth binary path as first argument and number of nodes as second"
     exit 2
 fi
 
@@ -221,5 +221,5 @@ initialiseNodes
 
 createBootNodeKey
 
-# launchBootNode
-# launchNodes
+launchBootNode
+launchNodes
