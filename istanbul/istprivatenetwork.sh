@@ -29,12 +29,11 @@
 # TODO: remember to add a function for the bootnode
 
 # Define variables
-GOPATH="/home/user98/go"
-PATH=$PATH:/usr/local/go/bin
 THIS_FILE_PARENT_DIR=`dirname \`readlink -f $0\``
 ISTANBUL_DIR="${HOME}/istanbultestnet"
 PASSWORD_PATH="${ISTANBUL_DIR}/passwd.txt"
-NUMBER_OF_NODES=$1
+NUMBER_OF_NODES=$2
+GETH_BIN_PATH=`readlink -f $1`
 GETAMIS_PATH="${GOPATH}/src/github.com/getamis"
 ISTANBUL_TOOLS_PATH="${GOPATH}/src/github.com/getamis/istanbul-tools"
 ISTANBUL_TOOLS_GITHUB="https://github.com/getamis/istanbul-tools.git"
@@ -43,29 +42,6 @@ BOOTNODE_PORT=48000
 PORT=48000
 RPC_PORT=95001
 NETWORKID=1530
-
-# Ensure script is run as root
-isRoot() {
-    if [ `whoami` != "root" ]; then
-        echo "Please run as root"
-        exit 2
-    fi
-}
-
-# Install go-ethereum
-installGeth() {
-    geth version > /dev/null 2>&1
-    if [ "$?" -ne "0" ]; then
-    echo
-        "---------Installing latest Geth---------"
-        apt-get install -y software-properties-common
-        add-apt-repository -y ppa:ethereum/ethereum
-        apt-get update
-        apt-get install -y ethereum
-        "---------Finished installing Geth---------"
-    echo
-    fi
-}
 
 # Create a common password file
 createPasswd() {
@@ -96,7 +72,7 @@ createAccounts() {
         if ! [ -d  ""${ISTANBUL_DIR}/node${i}"" ]; then
             mkdir -p ""${ISTANBUL_DIR}/node${i}""
         fi
-        geth --datadir "${ISTANBUL_DIR}/node${i}" --password ${PASSWORD_PATH} account new
+        ${GETH_BIN_PATH} --datadir "${ISTANBUL_DIR}/node${i}" --password ${PASSWORD_PATH} account new
     echo
     done
     echo "---------Finished creating Accounts---------"
@@ -147,8 +123,6 @@ createGenesis() {
     if ! [ -f "${ISTANBUL_TOOLS_PATH}/build/bin/istanbul" ]; then
         make -C ${ISTANBUL_TOOLS_PATH}
     fi
-    
-    chown -R `logname`:`logname` "${GETAMIS_PATH}"
 
     # Run istanbul-tools
     ${ISTANBUL_TOOLS_PATH}/build/bin/istanbul setup --num ${NUMBER_OF_NODES} --verbose --save > /dev/null 2>&1
@@ -177,7 +151,7 @@ initialiseNodes() {
     for i in `ls ${ISTANBUL_DIR} | grep node`
     do
     echo
-        geth --datadir "${ISTANBUL_DIR}/${i}" init "${ISTANBUL_DIR}/genesis.json"
+        ${GETH_BIN_PATH} --datadir "${ISTANBUL_DIR}/${i}" init "${ISTANBUL_DIR}/genesis.json"
     echo
     done
     echo "---------Finished initialising nodes with Genesis file---------"
@@ -208,10 +182,10 @@ launchNodes() {
         UNLOCKACCOUNT="-unlock \"0x`ls ${ISTANBUL_DIR}/${i}/keystore | cut -d'-' -f9`\" --password ${PASSWORD_PATH}"
 
         tmux new-window -t ${TMUX_SESSION_NAME}:${count} -n ${i} 
-        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "geth --datadir "${ISTANBUL_DIR}/${i}" ${FULL_SYNCMODE} --port ${PORT} --rpcport ${RPC_PORT} ${RPC} ${BOOTNODECMD} --networkid ${NETWORKID} ${GASPRICE} ${UNLOCKACCOUNT} ${MINE}" C-m
+        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} --datadir "${ISTANBUL_DIR}/${i}" ${FULL_SYNCMODE} --port ${PORT} --rpcport ${RPC_PORT} ${RPC} ${BOOTNODECMD} --networkid ${NETWORKID} ${GASPRICE} ${UNLOCKACCOUNT} ${MINE}" C-m
         tmux split-window -h -t ${TMUX_SESSION_NAME}:${count}
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "sleep 45s" C-m
-        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "geth attach ipc:${ISTANBUL_DIR}/${i}/geth.ipc"
+        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} attach ipc:${ISTANBUL_DIR}/${i}/geth.ipc" C-m
         
         PORT=`expr ${PORT} + 1`
         RPC_PORT=`expr ${RPC_PORT} + 1`
@@ -221,18 +195,18 @@ launchNodes() {
 
 ### Start of the main script
 if ! [ ${NUMBER_OF_NODES} -eq ${NUMBER_OF_NODES} ] || [ -z ${NUMBER_OF_NODES} ]; then
-    echo ${NUMBER_OF_NODES}
-    echo "Please enter the number of node you would like to create as the first argument"
+    echo "Please enter geth binary path as first arguement and number of nodes as second"
     exit 1
 fi
 
-isRoot
+if [ -z ${GETH_BIN_PATH} ]; then
+    echo "Please enter geth binary path as first arguement and number of nodes as second"
+    exit 2
+fi
 
 if [ -d "${ISTANBUL_DIR}" ]; then
     rm -rf "${ISTANBUL_DIR}"
 fi
-
-installGeth;
 
 createDir "${ISTANBUL_DIR}"
 cd "${ISTANBUL_DIR}"
@@ -247,7 +221,5 @@ initialiseNodes
 
 createBootNodeKey
 
-chown -R `logname`:`logname` "${ISTANBUL_DIR}"
-
 # launchBootNode
-launchNodes
+# launchNodes
