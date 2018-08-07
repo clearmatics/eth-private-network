@@ -3,15 +3,8 @@
 # TODO: instead of having 2 different scripts have multiple arguments which state what is to be done with the script
     # Think about the work for running the script
     #
-# TODO: Change the way ports are passed to the geth when the program is created
-# TODO: Get the istanbul version of Geth and decide which to use to build the latest version of geth or the autonity
-# TODO: Assume geth is installed and ask for bin path
-# TODO: change the chainid and mixhash in javascript to ensure wvery on has the right chainid
-#
 
 #DOING
-# TODO: Write Tmux scripts to bring up the network.
-# TODO: get rid of the superuser/isRoot stuff.
 
 # DONE
 # TODO: in the createAccount() function create the account using  password and geth
@@ -27,6 +20,11 @@
 # TODO: Only install geth if not availabe
 # TODO: Need to initialise each of the node using the genesis
 # TODO: remember to add a function for the bootnode
+# TODO: Write Tmux scripts to bring up the network.
+# TODO: get rid of the superuser/isRoot stuff.
+# TODO: change the chainid and mixhash in javascript to ensure wvery on has the right chainid
+# TODO: Assume geth is installed and ask for bin path
+# TODO: Change the way ports are passed to the geth when the program is created
 
 # Define variables
 THIS_FILE_PARENT_DIR=`dirname \`readlink -f $0\``
@@ -34,14 +32,13 @@ ISTANBUL_DIR="${HOME}/istanbultestnet"
 PASSWORD_PATH="${ISTANBUL_DIR}/passwd.txt"
 NUMBER_OF_NODES=$2
 GETH_BIN_PATH=`readlink -f $1`
-GETAMIS_PATH="${GOPATH}/src/github.com/getamis"
 ISTANBUL_TOOLS_PATH="${GOPATH}/src/github.com/getamis/istanbul-tools"
 ISTANBUL_TOOLS_GITHUB="https://github.com/getamis/istanbul-tools.git"
 TMUX_SESSION_NAME="istanbul_network"
 BOOTNODE_PORT=4800
 PORT=4800
 RPC_PORT=9501
-NETWORKID=1530
+CHAINID=1530
 
 # Create a common password file
 createPasswd() {
@@ -140,7 +137,7 @@ createGenesis() {
     ${ISTANBUL_TOOLS_PATH}/build/bin/istanbul extra encode --config "${ISTANBUL_DIR}/config.toml" | cut -d':' -f2 | tr -d " \t\n\r" >  "${ISTANBUL_DIR}/newextradata.txt"
 
     # Update genesis file, the genesis.json and extra data's file location is passed in and the rest of the addresses are passed to assign some ether
-    node "${THIS_FILE_PARENT_DIR}/updategenesis.js" "${ISTANBUL_DIR}/genesis.json" "${ISTANBUL_DIR}/newextradata.txt" ${ADDRESSES[@]}
+    node "${THIS_FILE_PARENT_DIR}/updategenesis.js" "${ISTANBUL_DIR}/genesis.json" "${ISTANBUL_DIR}/newextradata.txt" ${CHAINID} ${ADDRESSES[@]}
     echo "---------Finished creating Genesis file---------"
     echo
 }
@@ -182,7 +179,7 @@ launchNodes() {
         UNLOCKACCOUNT="-unlock \"0x`ls ${ISTANBUL_DIR}/${i}/keystore | cut -d'-' -f9`\" --password ${PASSWORD_PATH}"
 
         tmux new-window -t ${TMUX_SESSION_NAME}:${count} -n ${i} 
-        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} --datadir "${ISTANBUL_DIR}/${i}" ${FULL_SYNCMODE} --port ${PORT} --rpcport ${RPC_PORT} ${RPC} ${BOOTNODE} --networkid ${NETWORKID} ${GASPRICE} ${UNLOCKACCOUNT} ${MINE}" C-m
+        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} --datadir "${ISTANBUL_DIR}/${i}" ${FULL_SYNCMODE} --port ${PORT} --rpcport ${RPC_PORT} ${RPC} ${BOOTNODE} --networkid ${CHAINID} ${GASPRICE} ${UNLOCKACCOUNT} ${MINE} --etherbase \"0x`ls ${ISTANBUL_DIR}/${i}/keystore | cut -d'-' -f9`\"" C-m
         tmux split-window -h -t ${TMUX_SESSION_NAME}:${count}
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "sleep 45s" C-m
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} attach ipc:${ISTANBUL_DIR}/${i}/geth.ipc" C-m

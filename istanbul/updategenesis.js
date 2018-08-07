@@ -3,7 +3,8 @@ const fs = require('fs')
 const commandLineArgs = process.argv.slice(2)
 const genesisFilePath = commandLineArgs[0]
 const newExtraDataFilePath = commandLineArgs[1]
-const addresses = commandLineArgs.slice(2)
+const newChainId = parseInt(commandLineArgs[2])
+const addresses = commandLineArgs.slice(3)
 
 let rawGenesis = fs.readFileSync(genesisFilePath)
 let genesis = JSON.parse(rawGenesis)
@@ -21,5 +22,6 @@ for (var i = 0 ; i < addresses.length; i++) {
     genesis.alloc[addresses[i]] = {"balance" : startingBalance}
 }
 
-fs.writeFileSync(genesisFilePath, JSON.stringify(genesis, null, 4))
+genesis.config.chainId = newChainId
 
+fs.writeFileSync(genesisFilePath, JSON.stringify(genesis, null, 4))
