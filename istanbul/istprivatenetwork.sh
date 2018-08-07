@@ -89,8 +89,10 @@ createToml() {
     count=1
     for i in ${NODE_ADDRESSES[@]}
     do
-        if [ ${count} -eq "1" ]; then
+        if [ ${#NODE_ADDRESSES[@]} -eq "1" ]; then
             echo "validators = [\"0x${i}\"]" >> "${ISTANBUL_DIR}/config.toml"
+        elif [ ${count} -eq "1" ]; then
+            echo "validators = [\"0x${i}\"," >> "${ISTANBUL_DIR}/config.toml"
         elif [ ${count} -eq ${#NODE_ADDRESSES[@]} ]; then
             echo "${string}\"0x${i}\"]" >> "${ISTANBUL_DIR}/config.toml"
         else
@@ -120,15 +122,6 @@ createGenesis() {
     if ! [ -f "${ISTANBUL_TOOLS_PATH}/build/bin/istanbul" ]; then
         make -C ${ISTANBUL_TOOLS_PATH}
     fi
-
-    # Run istanbul-tools
-    ${ISTANBUL_TOOLS_PATH}/build/bin/istanbul setup --num ${NUMBER_OF_NODES} --verbose --save > /dev/null 2>&1
-
-    # Remove unnecessary folders created by istanbul-tools
-    for i in `seq 0 \`expr ${NUMBER_OF_NODES} - 1\``
-    do
-        rm -rf "${i}"
-    done
 
     # Create config.toml with the validators
     createToml ${ADDRESSES[@]}
@@ -167,19 +160,11 @@ launchBootNode() {
 }
 
 launchNodes() {
-    FULL_SYNCMODE="--syncmode 'full'"
-    RPC="--rpc --rpcaddr 'localhost' --rpcapi 'personal,db,eth,net,web3,txpool,miner'"
-    BOOTNODE="--bootnodes \"enode://`bootnode -nodekey ${ISTANBUL_DIR}/boot.key -writeaddress`@127.0.0.1:${BOOTNODE_PORT}\""
-    GASPRICE="--gasprice '1'"
-    MINE="--mine --minerthreads 1"
-
     count=1
     for i in `ls ${ISTANBUL_DIR} | grep node`
     do
-        UNLOCKACCOUNT="-unlock \"0x`ls ${ISTANBUL_DIR}/${i}/keystore | cut -d'-' -f9`\" --password ${PASSWORD_PATH}"
-
         tmux new-window -t ${TMUX_SESSION_NAME}:${count} -n ${i} 
-        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} --datadir "${ISTANBUL_DIR}/${i}" ${FULL_SYNCMODE} --port ${PORT} --rpcport ${RPC_PORT} ${RPC} ${BOOTNODE} --networkid ${CHAINID} ${GASPRICE} ${UNLOCKACCOUNT} ${MINE} --etherbase \"0x`ls ${ISTANBUL_DIR}/${i}/keystore | cut -d'-' -f9`\"" C-m
+        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} --datadir "${ISTANBUL_DIR}/${i}" --syncmode 'full' --port ${PORT} --rpcport ${RPC_PORT} --rpc --rpcaddr '0.0.0.0' --rpccorsdomain '*' --rpcapi 'personal,db,eth,net,web3,txpool,miner,istanbul' --bootnodes 'enode://`bootnode -nodekey ${ISTANBUL_DIR}/boot.key -writeaddress`@127.0.0.1:${BOOTNODE_PORT}' --networkid ${CHAINID} --gasprice '0' -unlock \"0x`ls ${ISTANBUL_DIR}/${i}/keystore | cut -d'-' -f9`\" --password ${PASSWORD_PATH} --debug --mine --minerthreads '1' --etherbase \"0x`ls ${ISTANBUL_DIR}/${i}/keystore | cut -d'-' -f9`\"" C-m
         tmux split-window -h -t ${TMUX_SESSION_NAME}:${count}
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "sleep 10s" C-m
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} attach ipc:${ISTANBUL_DIR}/${i}/geth.ipc" C-m
@@ -191,7 +176,7 @@ launchNodes() {
 }
 
 ### Start of the main script
-if ! [ ${NUMBER_OF_NODES} -eq ${NUMBER_OF_NODES} ] || [ -z ${NUMBER_OF_NODES} ]; then
+if ! [ ${NUMBER_OF_NODES} -eq ${NUMBER_OF_NODES} ] || [ -z ${NUMBER_OF_NODES} ] || [ ${NUMBER_OF_NODES} -lt "1" ]; then
     echo "Please enter geth binary path as first argument and number of nodes as second"
     exit 1
 fi
