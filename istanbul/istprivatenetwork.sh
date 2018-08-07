@@ -90,7 +90,7 @@ createToml() {
     for i in ${NODE_ADDRESSES[@]}
     do
         if [ ${count} -eq "1" ]; then
-            echo "validators = [\"0x${i}\"," >> "${ISTANBUL_DIR}/config.toml"
+            echo "validators = [\"0x${i}\"]" >> "${ISTANBUL_DIR}/config.toml"
         elif [ ${count} -eq ${#NODE_ADDRESSES[@]} ]; then
             echo "${string}\"0x${i}\"]" >> "${ISTANBUL_DIR}/config.toml"
         else
@@ -181,7 +181,7 @@ launchNodes() {
         tmux new-window -t ${TMUX_SESSION_NAME}:${count} -n ${i} 
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} --datadir "${ISTANBUL_DIR}/${i}" ${FULL_SYNCMODE} --port ${PORT} --rpcport ${RPC_PORT} ${RPC} ${BOOTNODE} --networkid ${CHAINID} ${GASPRICE} ${UNLOCKACCOUNT} ${MINE} --etherbase \"0x`ls ${ISTANBUL_DIR}/${i}/keystore | cut -d'-' -f9`\"" C-m
         tmux split-window -h -t ${TMUX_SESSION_NAME}:${count}
-        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "sleep 45s" C-m
+        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "sleep 10s" C-m
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} attach ipc:${ISTANBUL_DIR}/${i}/geth.ipc" C-m
         
         PORT=`expr ${PORT} + 1`
