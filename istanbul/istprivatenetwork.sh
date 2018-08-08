@@ -1,37 +1,12 @@
 #!/bin/bash
 
-# TODO: instead of having 2 different scripts have multiple arguments which state what is to be done with the script
-    # Think about the work for running the script
-    #
-
-#DOING
-
-# DONE
-# TODO: in the createAccount() function create the account using  password and geth
-# TODO: Remove the istanbul dir if it exists at the beginning of the script
-# TODO: Collect address from the nodes and add them to an array in order to create the genisis file
-# TODO: Think about how to get the addresss from nodes (possibly through the keystore folder in each of the nodes)
-# TODO: possibly need to download the getamis istanbul-tools
-# TODO: remmber the creation of genesis.json
-    # Delete unnecessary folders by istanbul tools
-    # Need to create the extra data from the toml file
-    # Create a javascript file to update genesis files
-    # Learn how to save the json into the file from script
-# TODO: Only install geth if not availabe
-# TODO: Need to initialise each of the node using the genesis
-# TODO: remember to add a function for the bootnode
-# TODO: Write Tmux scripts to bring up the network.
-# TODO: get rid of the superuser/isRoot stuff.
-# TODO: change the chainid and mixhash in javascript to ensure wvery on has the right chainid
-# TODO: Assume geth is installed and ask for bin path
-# TODO: Change the way ports are passed to the geth when the program is created
-
 # Define variables
-THIS_FILE_PARENT_DIR=`dirname \`readlink -f $0\``
-ISTANBUL_DIR="${HOME}/istanbultestnet"
+ARGS_LENGTH=${#@}
+STARTING_DIR=`pwd`
+ISTANBUL_DIR="${STARTING_DIR}/istanbultestnet"
 PASSWORD_PATH="${ISTANBUL_DIR}/passwd.txt"
 NUMBER_OF_NODES=$2
-GETH_BIN_PATH=`readlink -f $1`
+GETH_BIN_PATH=$1
 ISTANBUL_TOOLS_PATH="${GOPATH}/src/github.com/getamis/istanbul-tools"
 ISTANBUL_TOOLS_GITHUB="https://github.com/getamis/istanbul-tools.git"
 TMUX_SESSION_NAME="istanbul_network"
@@ -130,7 +105,7 @@ createGenesis() {
     ${ISTANBUL_TOOLS_PATH}/build/bin/istanbul extra encode --config "${ISTANBUL_DIR}/config.toml" | cut -d':' -f2 | tr -d " \t\n\r" >  "${ISTANBUL_DIR}/newextradata.txt"
 
     # Update genesis file, the genesis.json and extra data's file location is passed in and the rest of the addresses are passed to assign some ether
-    node "${THIS_FILE_PARENT_DIR}/updategenesis.js" "${ISTANBUL_DIR}/genesis.json" "${ISTANBUL_DIR}/newextradata.txt" ${CHAINID} ${ADDRESSES[@]}
+    node "${STARTING_DIR}/updategenesis.js" "${ISTANBUL_DIR}/genesis.json" "${ISTANBUL_DIR}/newextradata.txt" ${CHAINID} ${ADDRESSES[@]}
     echo "---------Finished creating Genesis file---------"
     echo
 }
@@ -176,32 +151,37 @@ launchNodes() {
 }
 
 ### Start of the main script
-if ! [ ${NUMBER_OF_NODES} -eq ${NUMBER_OF_NODES} ] || [ -z ${NUMBER_OF_NODES} ] || [ ${NUMBER_OF_NODES} -lt "1" ]; then
-    echo "Please enter geth binary path as first argument and number of nodes as second"
+if [ ${ARGS_LENGTH} -eq "1" ]; then
+    if [ -d ${ISTANBUL_DIR} ]; then
+    tmux kill-session -t ${TMUX_SESSION_NAME} > /dev/null 2>&1
+        launchBootNode
+        launchNodes
+    else
+        echo "Please create an istanbul network by passing geth binary with the number of node you would like to create"
+        exit 1
+    fi
+elif [ ${ARGS_LENGTH} -eq "2" ]; then
+    tmux kill-session -t ${TMUX_SESSION_NAME} > /dev/null 2>&1
+    if [ -d "${ISTANBUL_DIR}" ]; then
+        rm -rf "${ISTANBUL_DIR}"
+    fi
+
+    createDir "${ISTANBUL_DIR}"
+    cd "${ISTANBUL_DIR}"
+
+    createPasswd
+
+    createAccounts
+
+    createGenesis
+
+    initialiseNodes
+
+    createBootNodeKey
+
+    launchBootNode
+    launchNodes
+else
+    echo "Please create an istanbul network by passing geth binary with the number of node you would like to create"
     exit 1
 fi
-
-if [ -z ${GETH_BIN_PATH} ]; then
-    echo "Please enter geth binary path as first argument and number of nodes as second"
-    exit 2
-fi
-
-if [ -d "${ISTANBUL_DIR}" ]; then
-    rm -rf "${ISTANBUL_DIR}"
-fi
-
-createDir "${ISTANBUL_DIR}"
-cd "${ISTANBUL_DIR}"
-
-createPasswd
-
-createAccounts
-
-createGenesis
-
-initialiseNodes
-
-createBootNodeKey
-
-launchBootNode
-launchNodes
