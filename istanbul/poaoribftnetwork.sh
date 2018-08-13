@@ -165,7 +165,6 @@ if [ ${ARGS_LENGTH} -eq "1" ]; then
     fi
 elif [ ${ARGS_LENGTH} -eq "3" ]; then
     if [ ${CONSENSUS_ALGO} = "istanbul" ] || [ ${CONSENSUS_ALGO} = "clique" ]; then
-        echo $3
         tmux kill-session -t ${TMUX_SESSION_NAME} > /dev/null 2>&1
         if [ -d "${NETWORK_DIR}" ]; then
             rm -rf "${NETWORK_DIR}"
