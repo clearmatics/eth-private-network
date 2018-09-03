@@ -1,4 +1,5 @@
 const fs = require('fs')
+
 const commandLineArgs = process.argv.slice(2)
 const networkDir = commandLineArgs[0]
 const genesisFilePath = networkDir + "/genesis.json"

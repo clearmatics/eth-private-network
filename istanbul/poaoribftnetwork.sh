@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # Define variables
+CURRENT_DIR=`pwd`
 ARGS_LENGTH=${#@}
-STARTING_DIR=`dirname \`readlink -f $0\``
-NETWORK_DIR="${STARTING_DIR}/poaoribftnetwork"
+REPO_DIR=`dirname \`readlink -f $0\``
+NETWORK_DIR="${CURRENT_DIR}/poaoribftnetwork"
 PASSWORD_PATH="${NETWORK_DIR}/passwd.txt"
 GETH_BIN_PATH=$1
 NUMBER_OF_NODES=$2
@@ -46,6 +47,7 @@ createAccounts() {
             mkdir -p ""${NETWORK_DIR}/node${i}""
         fi
         ${GETH_BIN_PATH} --datadir "${NETWORK_DIR}/node${i}" --password ${PASSWORD_PATH} account new
+        node "${REPO_DIR}/generateprivatekey.js" "${NETWORK_DIR}/node${i}" `ls ${NETWORK_DIR}/node${i}/keystore | cut -d'-' -f9` ${PASSWORD_PATH}
     echo
     done
     echo "---------Finished creating Accounts---------"
@@ -108,7 +110,7 @@ createGenesis() {
     fi
 
     # Update genesis file, the genesis.json and extra data's file location is passed in and the rest of the addresses are passed to assign some ether
-    node "${STARTING_DIR}/updategenesis.js" ${NETWORK_DIR} ${CHAINID} ${CONSENSUS_ALGO} ${ADDRESSES[@]}
+    node "${REPO_DIR}/updategenesis.js" ${NETWORK_DIR} ${CHAINID} ${CONSENSUS_ALGO} ${ADDRESSES[@]}
     echo "---------Finished creating Genesis file---------"
     echo
 }
@@ -142,7 +144,7 @@ launchNodes() {
     for i in `ls ${NETWORK_DIR} | grep node`
     do
         tmux new-window -t ${TMUX_SESSION_NAME}:${count} -n ${i} 
-        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} --datadir "${NETWORK_DIR}/${i}" --syncmode 'full' --port ${PORT} --rpcport ${RPC_PORT} --rpc --rpcaddr '0.0.0.0' --rpccorsdomain '*' --rpcapi 'personal,db,eth,net,web3,txpool,miner,istanbul' --bootnodes 'enode://`bootnode -nodekey ${NETWORK_DIR}/boot.key -writeaddress`@127.0.0.1:${BOOTNODE_PORT}' --networkid ${CHAINID} --gasprice '0' -unlock \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\" --password ${PASSWORD_PATH} --debug --mine --minerthreads '1' --etherbase \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\"" C-m
+        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} --datadir ${NETWORK_DIR}/${i} --nodekey ${NETWORK_DIR}/${i}/node.key --syncmode 'full' --port ${PORT} --rpcport ${RPC_PORT} --rpc --rpcaddr '0.0.0.0' --rpccorsdomain '*' --rpcapi 'personal,db,eth,net,web3,txpool,miner,istanbul' --bootnodes 'enode://`bootnode -nodekey ${NETWORK_DIR}/boot.key -writeaddress`@127.0.0.1:${BOOTNODE_PORT}' --networkid ${CHAINID} --gasprice '0' -unlock \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\" --password ${PASSWORD_PATH} --debug --mine --minerthreads '1' --etherbase \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\"" C-m
         tmux split-window -h -t ${TMUX_SESSION_NAME}:${count}
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "sleep 10s" C-m
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} attach ipc:${NETWORK_DIR}/${i}/geth.ipc" C-m
