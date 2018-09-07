@@ -12,7 +12,7 @@ npm install
 Clone [Instabul](https://github.com/getamis/go-ethereum) and build geth by:
 ```
 cd path/to/istanbul/
-make geth
+make all
 ```
 
 ## New Istanbul (IBFT) network:
