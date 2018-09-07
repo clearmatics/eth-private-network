@@ -17,7 +17,7 @@ make all
 
 ## New Istanbul (IBFT) network:
 ```
-./poaoribftnetwork.sh path/to/istanbul/build/bin/geth [number of nodes] istanbul
+./poaoribftnetwork.sh path/to/istanbul/build/bin [number of nodes] istanbul
 ```
 
 This will create a `poaoribftnetwork` directory in the current directory as well as launching a tmux session called `poaoribft_network`, you can attach to it by:
@@ -50,14 +50,14 @@ poaoribftnetwork
 ## New Clique (PoA) network:
 
 ```
-./poaoribftnetwork.sh path/to/istanbul/build/bin/geth [number of nodes] clique
+./poaoribftnetwork.sh path/to/istanbul/build/bin [number of nodes] clique
 ```
 
 ## Launch an existing Istanbul or Clique
 
 Please ensure you are in the __parent__ directory of `poaoribftnetwork`, then run:
 ```
-./poaoribftnetwork.sh path/to/istanbul/build/bin/geth
+./poaoribftnetwork.sh path/to/istanbul/build/bin
 ```
 
 Because of the genesis file, the network will automatically run the correct consensus algorithm.

@@ -6,7 +6,8 @@ ARGS_LENGTH=${#@}
 REPO_DIR=`dirname \`readlink -f $0\``
 NETWORK_DIR="${CURRENT_DIR}/poaoribftnetwork"
 PASSWORD_PATH="${NETWORK_DIR}/passwd.txt"
-GETH_BIN_PATH=$1
+GETH_BIN_PATH="${1}/geth"
+BOOTNODE_BIN_PATH="${1}/bootnode"
 NUMBER_OF_NODES=$2
 CONSENSUS_ALGO=$3
 ISTANBUL_TOOLS_PATH="${GOPATH}/src/github.com/getamis/istanbul-tools"
@@ -130,12 +131,12 @@ initialiseNodes() {
 
 
 createBootNodeKey() {
-    bootnode -genkey "${NETWORK_DIR}/boot.key"
+    ${BOOTNODE_BIN_PATH} -genkey "${NETWORK_DIR}/boot.key"
 }
 
 launchBootNode() {
     tmux new -s ${TMUX_SESSION_NAME} -n "bootnode" -d
-    tmux send-keys -t "${TMUX_SESSION_NAME}:bootnode" "bootnode -nodekey \"${NETWORK_DIR}/boot.key\" -verbosity 9 -addr :${BOOTNODE_PORT}" C-m
+    tmux send-keys -t "${TMUX_SESSION_NAME}:bootnode" "${BOOTNODE_BIN_PATH} -nodekey \"${NETWORK_DIR}/boot.key\" -verbosity 9 -addr :${BOOTNODE_PORT}" C-m
     PORT=`expr ${PORT} + 1`
 }
 
@@ -144,7 +145,7 @@ launchNodes() {
     for i in `ls ${NETWORK_DIR} | grep node`
     do
         tmux new-window -t ${TMUX_SESSION_NAME}:${count} -n ${i} 
-        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} --datadir ${NETWORK_DIR}/${i} --nodekey ${NETWORK_DIR}/${i}/node.key --syncmode 'full' --port ${PORT} --rpcport ${RPC_PORT} --rpc --rpcaddr '0.0.0.0' --rpccorsdomain '*' --rpcapi 'personal,db,eth,net,web3,txpool,miner,istanbul' --bootnodes 'enode://`bootnode -nodekey ${NETWORK_DIR}/boot.key -writeaddress`@127.0.0.1:${BOOTNODE_PORT}' --networkid ${CHAINID} --gasprice '0' -unlock \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\" --password ${PASSWORD_PATH} --debug --mine --minerthreads '1' --etherbase \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\"" C-m
+        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} --datadir ${NETWORK_DIR}/${i} --nodekey ${NETWORK_DIR}/${i}/node.key --syncmode 'full' --port ${PORT} --rpcport ${RPC_PORT} --rpc --rpcaddr '0.0.0.0' --rpccorsdomain '*' --rpcapi 'personal,db,eth,net,web3,txpool,miner,istanbul' --bootnodes 'enode://`${BOOTNODE_BIN_PATH} -nodekey ${NETWORK_DIR}/boot.key -writeaddress`@127.0.0.1:${BOOTNODE_PORT}' --networkid ${CHAINID} --gasprice '0' -unlock \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\" --password ${PASSWORD_PATH} --debug --mine --minerthreads '1' --etherbase \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\"" C-m
         tmux split-window -h -t ${TMUX_SESSION_NAME}:${count}
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "sleep 10s" C-m
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} attach ipc:${NETWORK_DIR}/${i}/geth.ipc" C-m
