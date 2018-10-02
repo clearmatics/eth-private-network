@@ -10,8 +10,7 @@ GETH_BIN_PATH="${1}/geth"
 BOOTNODE_BIN_PATH="${1}/bootnode"
 NUMBER_OF_NODES=$2
 CONSENSUS_ALGO=$3
-ISTANBUL_TOOLS_PATH="${GOPATH}/src/github.com/getamis/istanbul-tools"
-ISTANBUL_TOOLS_GITHUB="https://github.com/getamis/istanbul-tools.git"
+ISTANBUL_TOOLS_PATH="${REPO_DIR}/bin/istanbul"
 TMUX_SESSION_NAME="poaoribft_network"
 BOOTNODE_PORT=4800
 PORT=4800
@@ -93,21 +92,11 @@ createGenesis() {
     done
 
     if [ ${CONSENSUS_ALGO} = "istanbul" ]; then
-        # Clone istanbul-tools
-        if ! [ -d "${ISTANBUL_TOOLS_PATH}" ]; then
-            git clone "${ISTANBUL_TOOLS_GITHUB}" "${ISTANBUL_TOOLS_PATH}"
-        fi
-
-        # Make istanbul-tools
-        if ! [ -f "${ISTANBUL_TOOLS_PATH}/build/bin/istanbul" ]; then
-            make -C ${ISTANBUL_TOOLS_PATH}
-        fi
-
         # Create config.toml with the validators
         createToml ${ADDRESSES[@]}
 
         # Call istanbul extra encode and store in a file
-        ${ISTANBUL_TOOLS_PATH}/build/bin/istanbul extra encode --config "${NETWORK_DIR}/config.toml" | cut -d':' -f2 | tr -d " \t\n\r" >  "${NETWORK_DIR}/newextradata.txt"
+        ${ISTANBUL_TOOLS_PATH} extra encode --config "${NETWORK_DIR}/config.toml" | cut -d':' -f2 | tr -d " \t\n\r" >  "${NETWORK_DIR}/newextradata.txt"
     fi
 
     # Update genesis file, the genesis.json and extra data's file location is passed in and the rest of the addresses are passed to assign some ether
@@ -145,7 +134,7 @@ launchNodes() {
     for i in `ls ${NETWORK_DIR} | grep node`
     do
         tmux new-window -t ${TMUX_SESSION_NAME}:${count} -n ${i} 
-        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} --datadir ${NETWORK_DIR}/${i} --nodekey ${NETWORK_DIR}/${i}/node.key --syncmode 'full' --port ${PORT} --rpcport ${RPC_PORT} --rpc --rpcaddr '0.0.0.0' --rpccorsdomain '*' --rpcapi 'personal,db,eth,net,web3,txpool,miner,istanbul' --bootnodes 'enode://`${BOOTNODE_BIN_PATH} -nodekey ${NETWORK_DIR}/boot.key -writeaddress`@127.0.0.1:${BOOTNODE_PORT}' --networkid ${CHAINID} --gasprice '0' -unlock \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\" --password ${PASSWORD_PATH} --debug --mine --minerthreads '1' --etherbase \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\"" C-m
+        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} --datadir ${NETWORK_DIR}/${i} --nodekey ${NETWORK_DIR}/${i}/node.key --syncmode 'full' --port ${PORT} --rpcport ${RPC_PORT} --rpc --rpcaddr '0.0.0.0' --rpccorsdomain '*' --rpcapi 'personal,db,eth,net,web3,txpool,miner,istanbul,clique' --bootnodes 'enode://`${BOOTNODE_BIN_PATH} -nodekey ${NETWORK_DIR}/boot.key -writeaddress`@127.0.0.1:${BOOTNODE_PORT}' --networkid ${CHAINID} --gasprice '0' -unlock \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\" --password ${PASSWORD_PATH} --debug --mine --minerthreads '1' --etherbase \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\"" C-m
         tmux split-window -h -t ${TMUX_SESSION_NAME}:${count}
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "sleep 10s" C-m
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} attach ipc:${NETWORK_DIR}/${i}/geth.ipc" C-m
