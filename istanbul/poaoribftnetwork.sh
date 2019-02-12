@@ -6,7 +6,7 @@ ARGS_LENGTH=${#@}
 REPO_DIR=`dirname \`readlink -f $0\``
 NETWORK_DIR="${CURRENT_DIR}/poaoribftnetwork"
 PASSWORD_PATH="${NETWORK_DIR}/passwd.txt"
-GETH_BIN_PATH="${1}/geth"
+AUTONITY_BIN_PATH="${1}/autonity"
 BOOTNODE_BIN_PATH="${1}/bootnode"
 NUMBER_OF_NODES=$2
 CONSENSUS_ALGO=$3
@@ -37,7 +37,7 @@ createDir() {
     fi
 }
 
-# Bye using Geth create the account in the given dir location
+# Bye using AUTONITY create the account in the given dir location
 createAccounts() {
     echo "---------Creating Accounts---------"
     for i in `seq 1 "${NUMBER_OF_NODES}"`
@@ -46,7 +46,7 @@ createAccounts() {
         if ! [ -d  ""${NETWORK_DIR}/node${i}"" ]; then
             mkdir -p ""${NETWORK_DIR}/node${i}""
         fi
-        ${GETH_BIN_PATH} --datadir "${NETWORK_DIR}/node${i}" --password ${PASSWORD_PATH} account new
+        ${AUTONITY_BIN_PATH} --datadir "${NETWORK_DIR}/node${i}" --password ${PASSWORD_PATH} account new
         node "${REPO_DIR}/generateprivatekey.js" "${NETWORK_DIR}/node${i}" `ls ${NETWORK_DIR}/node${i}/keystore | cut -d'-' -f9` ${PASSWORD_PATH}
     echo
     done
@@ -111,7 +111,7 @@ initialiseNodes() {
     for i in `ls ${NETWORK_DIR} | grep node`
     do
     echo
-        ${GETH_BIN_PATH} --datadir "${NETWORK_DIR}/${i}" init "${NETWORK_DIR}/genesis.json"
+        ${AUTONITY_BIN_PATH} --datadir "${NETWORK_DIR}/${i}" init "${NETWORK_DIR}/genesis.json"
     echo
     done
     echo "---------Finished initialising nodes with Genesis file---------"
@@ -134,10 +134,10 @@ launchNodes() {
     for i in `ls ${NETWORK_DIR} | grep node`
     do
         tmux new-window -t ${TMUX_SESSION_NAME}:${count} -n ${i} 
-        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} --datadir ${NETWORK_DIR}/${i} --nodekey ${NETWORK_DIR}/${i}/node.key --syncmode 'full' --port ${PORT} --rpcport ${RPC_PORT} --rpc --rpcaddr '0.0.0.0' --rpccorsdomain '*' --rpcapi 'personal,db,eth,net,web3,txpool,miner,istanbul,clique' --bootnodes 'enode://`${BOOTNODE_BIN_PATH} -nodekey ${NETWORK_DIR}/boot.key -writeaddress`@127.0.0.1:${BOOTNODE_PORT}' --networkid ${CHAINID} --gasprice '0' -unlock \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\" --password ${PASSWORD_PATH} --debug --mine --minerthreads '1' --etherbase \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\"" C-m
+        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${AUTONITY_BIN_PATH} --datadir ${NETWORK_DIR}/${i} --nodekey ${NETWORK_DIR}/${i}/node.key --syncmode 'full' --port ${PORT} --rpcport ${RPC_PORT} --rpc --rpcaddr '0.0.0.0' --rpccorsdomain '*' --rpcapi 'personal,db,eth,net,web3,txpool,miner,istanbul,clique' --bootnodes 'enode://`${BOOTNODE_BIN_PATH} -nodekey ${NETWORK_DIR}/boot.key -writeaddress`@127.0.0.1:${BOOTNODE_PORT}' --networkid ${CHAINID} --gasprice '0' -unlock \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\" --password ${PASSWORD_PATH} --debug --mine --minerthreads '1' --etherbase \"0x`ls ${NETWORK_DIR}/${i}/keystore | cut -d'-' -f9`\"" C-m
         tmux split-window -h -t ${TMUX_SESSION_NAME}:${count}
         tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "sleep 10s" C-m
-        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${GETH_BIN_PATH} attach ipc:${NETWORK_DIR}/${i}/geth.ipc" C-m
+        tmux send-keys -t ${TMUX_SESSION_NAME}:${count} "${AUTONITY_BIN_PATH} attach ipc:${NETWORK_DIR}/${i}/autonity.ipc" C-m
         
         PORT=`expr ${PORT} + 1`
         RPC_PORT=`expr ${RPC_PORT} + 1`
@@ -152,7 +152,7 @@ if [ ${ARGS_LENGTH} -eq "1" ]; then
         launchBootNode
         launchNodes
     else
-        echo "Please create an istanbul or clique network by passing geth binary with the number of node you would like to create and consensus algorithm"
+        echo "Please create an istanbul or clique network by passing autonity binary with the number of node you would like to create and consensus algorithm"
         exit 1
     fi
 elif [ ${ARGS_LENGTH} -eq "3" ]; then
@@ -182,6 +182,6 @@ elif [ ${ARGS_LENGTH} -eq "3" ]; then
         exit 1
     fi
 else
-    echo "Please create an istanbul or clique network by passing geth binary with the number of node you would like to create and consensus algorithm"
+    echo "Please create an istanbul or clique network by passing autonity binary with the number of node you would like to create and consensus algorithm"
     exit 1
 fi

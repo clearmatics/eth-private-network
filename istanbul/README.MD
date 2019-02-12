@@ -1,7 +1,7 @@
 The scripts can create a clique or Istanbul private network which is launched using tmux.
 
 # Pre-requsites
-## [NodeJS](https://nodejs.org/en/download/) and [Geth (Istanbul version)](https://github.com/getamis/go-ethereum)
+## [NodeJS](https://nodejs.org/en/download/) and [Autonity (Istanbul version)](https://github.com/getamis/go-ethereum)
 
 # Instructions
 
@@ -9,7 +9,7 @@ Install the required packages by:
 ```
 npm install
 ```
-Clone [Instabul](https://github.com/getamis/go-ethereum) and build geth by:
+Clone [Instabul](https://github.com/getamis/go-ethereum) and build autonity by:
 ```
 cd path/to/istanbul/
 make all
@@ -34,13 +34,13 @@ poaoribftnetwork
 |-- genesis.json
 |-- newextradata.txt
 |-- node1
-|   |-- geth
-|   |-- geth.ipc
+|   |-- autonity
+|   |-- autonity.ipc
 |   |-- keystore
 |   `-- node.key
 |-- node2
-|   |-- geth
-|   |-- geth.ipc
+|   |-- autonity
+|   |-- autonity.ipc
 |   |-- keystore
 |   `-- node.key
 `-- passwd.txt
